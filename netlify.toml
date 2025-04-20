@@ -1,0 +1,27 @@
+[build]
+  # Directory with the serverless functions, including background functions
+  functions = "netlify/functions"
+
+[build.environment]
+  # Set environment variables that will be available during build
+  NODE_VERSION = "18"
+
+# Specifically handle the app path first
+[[redirects]]
+  from = "/app"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/app.html"
+  to = "/app.html"
+  status = 200
+
+# Redirect any URL that isn't a static file to the index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  # Don't apply this rule to paths starting with /.netlify
+  force = false
+  conditions = {Path = {nin = ["/.netlify/functions/*"]}}

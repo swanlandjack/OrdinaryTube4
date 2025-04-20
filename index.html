@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordinary Tube - Class Access</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            margin: 50px auto;
+        }
+        h1 {
+            color: #FF0000;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background-color: #FF0000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+        #access-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        #debug-panel {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: left;
+            background-color: #f9f9f9;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ordinary Tube - Class Access</h1>
+        <p>Please enter the class password to access the YouTube search and summary tool.</p>
+        <p>Note: Only the first 20-30 students can access this application.</p>
+        
+        <form id="access-form">
+            <div class="form-group">
+                <label for="password">Class Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" id="submit-button">Access App</button>
+        </form>
+        
+        <div id="access-message" style="display: none;"></div>
+        <div id="debug-panel"></div>
+    </div>
+
+    <script>
+        // Debug logging utility
+        function logMessage(message) {
+            console.log(message);
+            const debugPanel = document.getElementById('debug-panel');
+            const time = new Date().toLocaleTimeString();
+            debugPanel.innerHTML += `<div>[${time}] ${message}</div>`;
+            // Auto-scroll to bottom
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+        }
+        
+        // Check for existing token and redirect if found
+        document.addEventListener('DOMContentLoaded', function() {
+            logMessage("Page loaded, checking for existing token");
+            
+            const token = localStorage.getItem('ordinaryTubeAccess');
+            if (token) {
+                logMessage("Found existing token, redirecting to app");
+                window.location.href = '/app.html';
+                return;
+            }
+            
+            logMessage("No existing token found");
+        });
+        
+        // Handle form submission
+        const form = document.getElementById('access-form');
+        const accessMessage = document.getElementById('access-message');
+        const submitButton = document.getElementById('submit-button');
+        
+        if (form) {
+            logMessage("Form found, adding submit listener");
+            
+            form.addEventListener('submit', async function(event) {
+                // Prevent default form submission
+                event.preventDefault();
+                logMessage("Form submit triggered");
+                
+                // Disable button to prevent multiple submissions
+                submitButton.disabled = true;
+                submitButton.textContent = "Verifying...";
+                
+                // Show status message
+                accessMessage.textContent = "Verifying password...";
+                accessMessage.className = "info";
+                accessMessage.style.display = "block";
+                
+                // Get password
+                const password = document.getElementById('password').value;
+                logMessage(`Password entered (length: ${password.length})`);
+                
+                try {
+                    // Make API request with proper headers
+                    logMessage("Starting API request");
+                    
+                    const requestData = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ password })
+                    };
+                    
+                    logMessage("Request details prepared");
+                    
+                    // Make the fetch request
+                    logMessage("Sending fetch request to /.netlify/functions/check-password");
+                    const response = await fetch('/.netlify/functions/check-password', requestData);
+                    
+                    logMessage(`Received response with status: ${response.status}`);
+                    
+                    // Parse response
+                    const result = await response.json();
+                    logMessage(`Response data: ${JSON.stringify(result)}`);
+                    
+                    // Handle result
+                    if (result.success) {
+                        // Store token
+                        localStorage.setItem('ordinaryTubeAccess', result.token);
+                        logMessage("Token stored in localStorage");
+                        
+                        // Update UI
+                        accessMessage.textContent = "Access granted! Redirecting...";
+                        accessMessage.className = "info";
+                        
+                        // Redirect after a short delay
+                        logMessage("Redirecting to app.html in 1 second");
+                        setTimeout(() => {
+                            window.location.href = '/app.html';
+                        }, 1000);
+                    } else {
+                        // Show error
+                        logMessage(`Login failed: ${result.message}`);
+                        accessMessage.textContent = result.message || "Access denied. Please check your password.";
+                        accessMessage.className = "error";
+                        
+                        // Reset button
+                        submitButton.disabled = false;
+                        submitButton.textContent = "Access App";
+                    }
+                } catch (error) {
+                    // Handle fetch errors
+                    logMessage(`ERROR: ${error.message}`);
+                    console.error('Error details:', error);
+                    
+                    accessMessage.textContent = "An error occurred. Please try again later.";
+                    accessMessage.className = "error";
+                    
+                    // Reset button
+                    submitButton.disabled = false;
+                    submitButton.textContent = "Access App";
+                }
+            });
+        } else {
+            console.error("ERROR: Form element not found");
+        }
+        
+        // Also add direct button click listener for better debugging
+        if (submitButton) {
+            submitButton.addEventListener('click', function() {
+                logMessage("Submit button clicked directly");
+            });
+        }
+    </script>
+</body>
+</html>

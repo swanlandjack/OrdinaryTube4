@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ordinary Tube Search and Summary (Proxy)</title> <style>
+        /* --- Your existing CSS styles --- */
+        /* (Keep all your styles as they were) */
+         body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #FF0000;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #FF0000;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+        .prompt-bubbles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .prompt-bubble {
+            background-color: #e0e0e0;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .prompt-bubble:hover {
+            background-color: #d0d0d0;
+        }
+        .prompt-bubble.active {
+            background-color: #FF0000;
+            color: white;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .video-item {
+            display: flex;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .video-thumbnail {
+            width: 120px;
+            margin-right: 15px;
+        }
+        .video-thumbnail img {
+            width: 100%;
+            border-radius: 4px;
+        }
+        .video-info {
+            flex-grow: 1;
+        }
+        .video-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .video-stats {
+            font-size: 14px;
+            color: #606060;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            font-style: italic;
+            color: #666;
+        }
+        .search-term-header {
+            margin-top: 20px;
+            background-color: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            color: #333;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        .checkbox-group label {
+            display: inline;
+            font-weight: normal;
+        }
+        .video-summary-container {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #ddd;
+        }
+        .video-summary-loading {
+            color: #888;
+            font-style: italic;
+        }
+        .summary-header {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #8758FF;
+            font-size: 16px;
+        }
+        .summary-content {
+            background-color: #F9F4FF;
+            padding: 12px 16px;
+            border-radius: 4px;
+            border-left: 3px solid #8758FF;
+            line-height: 1.6;
+        }
+        .summary-content strong {
+            font-weight: bold;
+        }
+        .summary-content ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+        .summary-content li {
+            margin-bottom: 16px;
+            padding-left: 1.5em;
+            text-indent: -1.5em;
+        }
+        .summary-content li:before {
+            content: "• ";
+        }
+        .hidden { /* Keep hidden class for other uses if needed */
+            display: none;
+        }
+        #accessVerification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #logoutBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        /* Optional: Keep debug div */
+        #debug {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #f8f8f8;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        /* Removed .api-key-section related styles if only used there */
+        /* If .section-header, .toggle-button etc were only for API keys, they can be removed too */
+    </style>
+</head>
+<body>
+    <div id="accessVerification">
+        <div style="text-align: center; max-width: 400px; padding: 20px;">
+            <h2>Verifying Access...</h2>
+            <p>Please wait while we verify your access to this application.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <button id="logoutBtn">Log Out</button>
+        <h1>Ordinary YouTube Top Videos Search & AI Summary (Proxy)</h1> <p>Find the most viewed YouTube videos based on keywords and time range</p>
+
+        <div class="form-group">
+            <label for="keywords">Keywords or Phrases:</label>
+            <input type="text" id="keywords" placeholder="Enter search keywords">
+        </div>
+
+        <div class="form-group">
+            <label>Quick Prompts:</label>
+            <div class="prompt-bubbles">
+                <button type="button" class="prompt-bubble" data-prompt="TVB News">TVB News</button>
+                <button type="button" class="prompt-bubble" data-prompt="CNBC">CNBC</button>
+                <button type="button" class="prompt-bubble" data-prompt="Bloomberg News">Bloomberg News</button>
+                <button type="button" class="prompt-bubble" data-prompt="BBC News">BBC News</button>
+                <button type="button" class="prompt-bubble" data-prompt="信報財經新聞">信報財經新聞</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="timeRange">Time Range:</label>
+            <select id="timeRange">
+                <option value="1">Last 24 hours</option>
+                <option value="7" selected>Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 3 months</option>
+                <option value="180">Last 6 months</option>
+                <option value="365">Last year</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Options:</label>
+            <div class="checkbox-group">
+                <input type="checkbox" id="fetchSummaries" checked>
+                <label for="fetchSummaries">Generate summaries using Gemini API</label>
+            </div>
+        </div>
+
+        <button id="searchBtn">Search</button>
+
+        <div id="loading" class="loading" style="display: none;">
+            Searching for videos... This may take a moment.
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="results"></div>
+    </div>
+
+    <div id="debug">---- DEBUG OUTPUT ----</div>
+
+    <script>
+    console.log("APP.HTML: Script block START (Proxy Version)");
+
+    // Global variable for active prompts
+    let activePrompts = [];
+
+    // === START: NEW PROXY HELPER FUNCTIONS ===
+    /**
+     * Calls the YouTube proxy function.
+     * @param {object} params - Parameters { q: string, timeRangeDays: string, maxResults: number }
+     * @returns {Promise<object>} - The response data containing the video items.
+     */
+    async function searchYouTube(params) {
+        const queryString = new URLSearchParams(params).toString();
+        const endpoint = `/.netlify/functions/youtube-proxy?${queryString}`;
+        console.log(`APP.HTML: Calling YouTube proxy: ${endpoint}`);
+        try {
+            const response = await fetch(endpoint); // GET request
+            const data = await response.json();
+            if (!response.ok) {
+                console.error('APP.HTML: YouTube Proxy Error Response:', data);
+                throw new Error(data.error || `Request failed with status ${response.status}`);
+            }
+            console.log('APP.HTML: YouTube Proxy Results Received:', data);
+            return data;
+        } catch (error) {
+            console.error('APP.HTML: Failed to fetch from YouTube proxy:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Calls the Gemini proxy function.
+     * @param {object} payload - The request body expected by the Gemini API
+     * @returns {Promise<object>} - The response data from the Gemini API
+     */
+    async function callGemini(payload) {
+        const endpoint = '/.netlify/functions/gemini-proxy';
+        console.log('APP.HTML: Calling Gemini proxy...');
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                 console.error('APP.HTML: Gemini Proxy Error Response:', data);
+                const detailError = data.error?.message || data.details || `Request failed with status ${response.status}`;
+                throw new Error(data.error?.message || detailError);
+            }
+            if (data.error) {
+                 console.error('APP.HTML: Gemini API returned error object within 200 OK:', data.error);
+                throw new Error(data.error.message || 'Gemini API returned an unspecified error');
+            }
+             if (data.candidates && data.candidates.length > 0 && data.candidates[0].finishReason === 'SAFETY') {
+                  console.warn("APP.HTML: Gemini summary generation blocked due to safety settings (via proxy).");
+                  throw new Error("Summary generation was blocked due to safety settings.");
+             }
+             if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                  console.warn("APP.HTML: Gemini proxy response structure unexpected or content missing:", data);
+                  throw new Error("Failed to generate summary. Unexpected response format from API via proxy.");
+             }
+            console.log('APP.HTML: Gemini Proxy Response Received:', data);
+            return data;
+        } catch (error) {
+            console.error('APP.HTML: Failed to fetch from Gemini proxy:', error);
+            throw error;
+        }
+    }
+    // === END: NEW PROXY HELPER FUNCTIONS ===
+
+
+    // Verify access token before showing content
+    document.addEventListener('DOMContentLoaded', async function () {
+        console.log("APP.HTML: DOMContentLoaded event fired (Proxy Version)");
+        const accessToken = localStorage.getItem('ordinaryTubeAccess');
+        console.log("APP.HTML: Access token from localStorage:", accessToken ? `Found (length: ${accessToken.length})` : "Not found");
+        const accessVerification = document.getElementById('accessVerification');
+        if (!accessVerification) {
+             console.error("APP.HTML: Critical error - accessVerification element not found!");
+             alert("Critical error: UI element missing. Cannot verify access.");
+             return;
+        }
+        if (!accessToken) {
+            console.log("APP.HTML: No access token found, redirecting to login.");
+            window.location.href = "/";
+            return;
+        }
+        try {
+            console.log("APP.HTML: Attempting to verify token via fetch to /.netlify/functions/verify-access");
+            const response = await fetch('/.netlify/functions/verify-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: accessToken })
+            });
+            console.log("APP.HTML: Verification fetch response status:", response.status);
+            if (!response.ok) {
+                console.error(`APP.HTML: Verification fetch failed with status ${response.status}`);
+                throw new Error(`Verification failed with status ${response.status}`);
+            }
+            const result = await response.json();
+            console.log("APP.HTML: Verification fetch result:", result);
+            if (result.success) {
+                console.log("APP.HTML: Token verified successfully, hiding overlay and setting up app.");
+                accessVerification.style.display = 'none';
+                setupApp(); // Initialize the main application UI and logic
+            } else {
+                console.warn("APP.HTML: Token verification failed (API returned success: false), redirecting to login.");
+                localStorage.removeItem('ordinaryTubeAccess');
+                window.location.href = "/";
+            }
+        } catch (err) {
+            console.error("APP.HTML: Error during access verification fetch:", err);
+            alert(`An error occurred during verification: ${err.message}. Redirecting to login.`);
+            localStorage.removeItem('ordinaryTubeAccess');
+            window.location.href = "/";
+        }
+    });
+
+    // Set up the application after access verification
+    function setupApp() {
+        console.log("APP.HTML: setupApp() called - Initializing application UI and listeners (Proxy Version).");
+
+        // Set up event listeners
+        const searchBtn = document.getElementById('searchBtn');
+        if (searchBtn) {
+             searchBtn.addEventListener('click', searchAllVideos); // Removed arrow function wrapper, directly call
+        } else {
+            console.error("APP.HTML: Search button not found!");
+        }
+
+        const logoutBtn = document.getElementById('logoutBtn');
+         if (logoutBtn) {
+             logoutBtn.addEventListener('click', function() {
+                console.log("APP.HTML: Logout button clicked.");
+                localStorage.removeItem('ordinaryTubeAccess');
+                window.location.href = "/";
+            });
+         } else {
+             console.error("APP.HTML: Logout button not found!");
+         }
+
+        // Add event listeners for prompt bubbles
+        const promptBubbles = document.querySelectorAll('.prompt-bubble');
+        promptBubbles.forEach(bubble => {
+            bubble.addEventListener('click', function() {
+                const prompt = this.getAttribute('data-prompt');
+                console.log(`APP.HTML: Prompt bubble clicked: ${prompt}`);
+                if (this.classList.contains('active')) {
+                    this.classList.remove('active');
+                    activePrompts = activePrompts.filter(item => item !== prompt);
+                } else {
+                    this.classList.add('active');
+                    activePrompts.push(prompt);
+                }
+                console.log("APP.HTML: Active prompts:", activePrompts);
+            });
+        });
+
+        // --- API Key saving/loading/toggling logic REMOVED ---
+    }
+
+    // --- saveAPIKeys function REMOVED ---
+    // --- loadSavedAPIKeys function REMOVED ---
+
+
+    // Function to search for all videos based on selected terms
+    async function searchAllVideos() {
+         console.log("APP.HTML: searchAllVideos() called (Proxy Version).");
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('error');
+        const loadingDiv = document.getElementById('loading');
+        // --- REMOVED: apiKeyInput ---
+        const keywordsInput = document.getElementById('keywords');
+
+        // Ensure elements exist
+        if (!resultsDiv || !errorDiv || !loadingDiv || !keywordsInput) {
+            console.error("APP.HTML: Critical error - UI element missing for search.");
+            alert("Error: Cannot perform search due to missing UI elements.");
+            return;
+        }
+
+        // --- REMOVED: apiKey reading ---
+        const freeTextInput = keywordsInput.value.trim();
+
+        console.log(`APP.HTML: Free text input: "${freeTextInput}"`);
+        console.log(`APP.HTML: Active prompts: ${JSON.stringify(activePrompts)}`);
+
+        resultsDiv.innerHTML = '';
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+
+        // --- REMOVED: API Key Validation ---
+
+        if (activePrompts.length === 0 && !freeTextInput) {
+             console.log("APP.HTML: Search aborted - No keywords or prompts selected.");
+            errorDiv.textContent = 'Please enter keywords or select a prompt bubble';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        loadingDiv.style.display = 'block';
+
+        const searchTerms = [...activePrompts];
+        if (freeTextInput) {
+            searchTerms.push(freeTextInput);
+        }
+         console.log("APP.HTML: Combined search terms:", searchTerms);
+
+        try {
+            const resultHeader = document.createElement('h2');
+            resultHeader.textContent = `Search Results`;
+            resultsDiv.appendChild(resultHeader);
+
+            let allVideos = [];
+
+            // Process each search term using the new helper function
+            const timeRangeSelect = document.getElementById('timeRange');
+            const timeRangeDays = timeRangeSelect ? timeRangeSelect.value : '7'; // Default if missing
+            const maxResultsPerTerm = 3; // Keep original logic
+
+             console.log(`APP.HTML: Starting search loop for ${searchTerms.length} term(s).`);
+            for (const term of searchTerms) {
+                 console.log(`APP.HTML: Searching (via proxy) for term: "${term}"`);
+                try {
+                    // Call the PROXY helper function
+                    const searchResult = await searchYouTube({
+                        q: term,
+                        timeRangeDays: timeRangeDays,
+                        maxResults: maxResultsPerTerm
+                    });
+
+                    const videos = searchResult.items || []; // Get videos from proxy response
+                    console.log(`APP.HTML: Found ${videos.length} videos for "${term}" via proxy`);
+
+                    videos.forEach(video => {
+                        video.searchTerm = term; // Add source term back for grouping
+                    });
+
+                    allVideos = allVideos.concat(videos);
+
+                } catch (error) {
+                    console.error(`APP.HTML: Error searching (via proxy) for "${term}":`, error);
+                    const termErrorDiv = document.createElement('div');
+                    termErrorDiv.className = 'search-term-header error';
+                    termErrorDiv.style.color = 'red';
+                    termErrorDiv.textContent = `Error searching for "${term}": ${error.message}`;
+                    resultsDiv.appendChild(termErrorDiv);
+                }
+            }
+             console.log(`APP.HTML: Total videos collected across all terms via proxy: ${allVideos.length}`);
+
+            // Display all videos (this function is updated below)
+            await displayVideos(allVideos, resultsDiv);
+
+        } catch (error) {
+             console.error("APP.HTML: Error in searchAllVideos main block (Proxy Version):", error);
+            errorDiv.textContent = error.message || 'An error occurred while searching for videos';
+            errorDiv.style.display = 'block';
+        } finally {
+             console.log("APP.HTML: Hiding loading indicator.");
+            loadingDiv.style.display = 'none';
+        }
+    }
+
+
+    // --- searchVideos function REMOVED (logic integrated into proxy & searchAllVideos) ---
+
+
+    // Function to detect Chinese characters (Keep as is)
+    function containsChinese(text) {
+        if (!text) return false;
+        const chineseRegex = /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFF]/;
+        return chineseRegex.test(text);
+    }
+
+
+    // Function to get a summary from Gemini API (using proxy)
+    async function fetchGeminiSummary(videoInfo) { // Removed geminiApiKey parameter
+         console.log(`APP.HTML: fetchGeminiSummary called for video ID: ${videoInfo.id} (Proxy Version)`);
+        try {
+            // --- REMOVED: API Key check ---
+
+            const title = videoInfo.snippet?.title || '';
+            const description = videoInfo.snippet?.description || '';
+            const channelTitle = videoInfo.snippet?.channelTitle || '';
+            const isChineseContent = containsChinese(title) || containsChinese(description);
+
+            // --- REMOVED: Gemini Endpoint definition (handled in proxy) ---
+
+            const prompt = isChineseContent ?
+            `請根據這個YouTube影片的標題和描述，提供詳細的摘要：\n\n標題: ${title}\n頻道: ${channelTitle}\n描述: ${description}\n\n請提供5個重點，概括這個影片的主要資訊：\n1. 確保每個重點開始於一個項目符號 (•)\n2. 每個重點應該有一個粗體的標題，後面跟著詳細的解釋\n3. 使用繁體中文\n4. 保持清晰和易於閱讀`
+            :
+            `Please provide a summary of this YouTube video based on its title and description:\n\nTitle: ${title}\nChannel: ${channelTitle}\nDescription: ${description}\n\nPlease create a summary with 5 bullet points that cover the main information from this video.\nFor each point:\n1. Start with a bullet point (•)\n2. Include a bold title/heading within the point.\n3. Follow with a clear explanation.\n4. Keep it informative and concise.\n\nFocus on extracting the most important information, insights, or topics mentioned or implied by the title and description.`;
+
+            const requestBody = {
+                contents: [ { parts: [ { text: prompt } ] } ],
+                generationConfig: { temperature: 0.3, maxOutputTokens: 800 }
+            };
+             console.log("APP.HTML: Calling Gemini proxy helper...");
+
+            // Call the PROXY helper function
+            const data = await callGemini(requestBody);
+
+            // Process the response from the proxy helper
+            // The helper already validated the basic structure and errors
+            let text = data.candidates[0].content.parts[0].text;
+            console.log("APP.HTML: Received summary text from Gemini via proxy.");
+
+            // Basic Markdown processing (keep as is)
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/^\s*([•*-])\s*(.*)/gm, '<li>$2</li>');
+            if (text.includes('<li>')) { text = '<ul>' + text + '</ul>'; }
+            text = text.replace(/\n/g, '<br>');
+            text = text.replace(/<br><li>/g, '<li>');
+            text = text.replace(/<\/li><br>/g, '</li>');
+
+            return text;
+
+        } catch (error) {
+            // Errors are now thrown by callGemini helper
+            console.error('APP.HTML: Error in fetchGeminiSummary (Proxy Version):', error);
+            return `<span class="error">Error generating summary: ${error.message}</span>`; // Return error message HTML
+        }
+    }
+
+
+    // Function to display videos (Updated to use revised fetchAndDisplaySummary)
+    async function displayVideos(videos, resultsDiv) {
+        console.log(`APP.HTML: displayVideos called with ${videos.length} videos (Proxy Version).`);
+        if (!resultsDiv) { console.error("APP.HTML: Cannot display videos - resultsDiv is null!"); return; }
+
+        if (videos.length === 0) {
+            resultsDiv.innerHTML += '<p>No videos found matching your criteria.</p>';
+            return;
+        }
+
+        const fetchSummariesCheckbox = document.getElementById('fetchSummaries');
+        const shouldGenerateSummaries = fetchSummariesCheckbox ? fetchSummariesCheckbox.checked : false;
+        console.log(`APP.HTML: Generate summaries enabled: ${shouldGenerateSummaries}`);
+
+        // --- REMOVED: Reading geminiApiKey ---
+
+        const groupedVideos = {};
+        videos.forEach(video => {
+            const term = video.searchTerm || 'Unknown Term';
+            if (!groupedVideos[term]) groupedVideos[term] = [];
+            groupedVideos[term].push(video);
+        });
+        console.log("APP.HTML: Videos grouped by search term:", Object.keys(groupedVideos));
+
+        const fragment = document.createDocumentFragment();
+        const videosToSummarize = []; // Still need this list to trigger summary fetches
+
+        // === FIRST LOOP: Build the HTML structure ===
+        for (const [term, termVideos] of Object.entries(groupedVideos)) {
+            console.log(`APP.HTML: Building HTML for ${termVideos.length} videos for term "${term}"`);
+            const termHeader = document.createElement('div');
+            termHeader.className = 'search-term-header';
+            termHeader.textContent = `Results for "${term}"`;
+            fragment.appendChild(termHeader);
+
+            for (let index = 0; index < termVideos.length; index++) {
+                const video = termVideos[index];
+                if (!video || !video.id || !video.snippet || !video.statistics) {
+                    console.warn("APP.HTML: Skipping invalid video data object:", video);
+                    continue;
+                }
+
+                const videoItem = document.createElement('div');
+                videoItem.className = 'video-item';
+                videoItem.id = `video-item-${video.id}`;
+
+                const views = parseInt(video.statistics.viewCount || 0).toLocaleString();
+                const likes = video.statistics.likeCount ? parseInt(video.statistics.likeCount).toLocaleString() : 'N/A';
+                const publishDate = video.snippet.publishedAt ? new Date(video.snippet.publishedAt).toLocaleDateString() : 'N/A';
+                // --- CORRECTED VIDEO URL ---
+                const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Standard YouTube watch URL
+                const thumbnailUrl = video.snippet.thumbnails?.medium?.url || video.snippet.thumbnails?.default?.url || '';
+                const title = video.snippet.title || 'No Title';
+                const channelTitle = video.snippet.channelTitle || 'Unknown Channel';
+                const description = video.snippet.description || '';
+                const shortDescription = description.length > 150 ? description.substring(0, 150) + '...' : description;
+
+                let videoHtml = `
+                    <div class="video-thumbnail">
+                        <a href="${videoUrl}" target="_blank" rel="noopener noreferrer">
+                            ${thumbnailUrl ? `<img src="${thumbnailUrl}" alt="Thumbnail for ${title}">` : '(No Thumbnail)'}
+                        </a>
+                    </div>
+                    <div class="video-info">
+                        <div class="video-title">
+                            ${index + 1}. <a href="${videoUrl}" target="_blank" rel="noopener noreferrer">${title}</a>
+                        </div>
+                        <div class="video-channel">
+                            Channel: ${channelTitle}
+                        </div>
+                        <div class="video-stats">
+                            ${views} views • ${likes} likes • Published on ${publishDate}
+                        </div>
+                        <div class="video-description" title="${description}"> ${shortDescription}
+                        </div>
+                `;
+
+                if (shouldGenerateSummaries) {
+                    videoHtml += `
+                        <div class="video-summary-container" id="summary-container-${video.id}">
+                             <div class="summary-header">Gemini Summary:</div>
+                            <div class="video-summary-loading" id="summary-loading-${video.id}"> Generating summary...</div>
+                            <div class="video-summary-content" id="summary-content-${video.id}" style="display: none;"></div>
+                        </div>
+                    `;
+                    // Mark video for summary fetching regardless of key presence here
+                    videosToSummarize.push(video);
+                }
+
+                videoHtml += `</div>`; // Close video-info
+                videoItem.innerHTML = videoHtml;
+                fragment.appendChild(videoItem);
+            }
+        }
+
+        // *** STEP 1: Append fragment to DOM ***
+        console.log("APP.HTML: Appending video fragment to resultsDiv (Proxy Version).");
+        resultsDiv.appendChild(fragment);
+
+        // *** STEP 2: Fetch summaries if needed ***
+        if (shouldGenerateSummaries && videosToSummarize.length > 0) {
+            console.log(`APP.HTML: Starting summary fetches for ${videosToSummarize.length} videos (Proxy Version).`);
+            const summaryPromises = videosToSummarize.map(video => fetchAndDisplaySummary(video)); // No key passed here
+            Promise.allSettled(summaryPromises).then(results => {
+                 console.log("APP.HTML: All summary fetches settled (Proxy Version).");
+                 results.forEach((result, index) => {
+                     if (result.status === 'rejected') {
+                         console.error(`APP.HTML: Summary fetch failed for video ${videosToSummarize[index].id} (via proxy):`, result.reason);
+                         const contentElement = document.getElementById(`summary-content-${videosToSummarize[index].id}`);
+                         const loadingElement = document.getElementById(`summary-loading-${videosToSummarize[index].id}`);
+                         if (loadingElement) loadingElement.style.display = 'none';
+                         if (contentElement) {
+                             contentElement.innerHTML = `<span class="error">Failed to load summary: ${result.reason?.message || 'Unknown error'}</span>`;
+                             contentElement.style.display = 'block';
+                         }
+                     }
+                 });
+             });
+        } else if (shouldGenerateSummaries) {
+            console.log("APP.HTML: No videos marked for summary generation, or summary feature disabled.");
+            // If summaries were checked but no videos found, maybe add a message? Optional.
+        }
+
+        // Add copyable links section
+        addCopyableLinksSection(videos, resultsDiv); // Pass all original videos found
+    }
+
+
+     // Helper function to fetch and display summary for a single video (Updated call)
+     async function fetchAndDisplaySummary(video) { // Removed geminiApiKey parameter
+         console.log(`APP.HTML: Starting summary fetch for video ${video.id} (Proxy Version)`);
+         const loadingElement = document.getElementById(`summary-loading-${video.id}`);
+         const contentElement = document.getElementById(`summary-content-${video.id}`);
+
+         if (!loadingElement || !contentElement) {
+              console.error(`APP.HTML: Summary placeholder elements not found for video ${video.id}`);
+              return; // Stop if elements aren't there
+         }
+
+         // Hide loading indicator immediately, show content area (will contain result or error)
+         //loadingElement.style.display = 'none'; // Keep loading visible until fetch completes
+         //contentElement.style.display = 'block'; // Don't show content area yet
+
+         try {
+             // Call the updated fetchGeminiSummary (which uses the proxy)
+             const summaryHtml = await fetchGeminiSummary(video); // No key passed here
+             contentElement.innerHTML = summaryHtml; // Use innerHTML as it returns HTML string or error span
+             console.log(`APP.HTML: Summary displayed for video ${video.id} (Proxy Version)`);
+
+         } catch (error) {
+             // This catch might be redundant if fetchGeminiSummary handles errors, but good safety net.
+             console.error(`APP.HTML: Error displaying summary for video ${video.id} (Proxy Version):`, error);
+             contentElement.innerHTML = `<span class="error">Error loading summary: ${error.message}</span>`;
+         } finally {
+             // Ensure loading is hidden and content is shown regardless of success/error
+             loadingElement.style.display = 'none';
+             contentElement.style.display = 'block';
+         }
+     }
+
+
+     // Function to add the copyable links section (Updated video URL)
+     function addCopyableLinksSection(videos, resultsDiv) {
+         console.log("APP.HTML: Adding copyable links section (Proxy Version).");
+         if (!resultsDiv) return;
+
+         const existingSection = resultsDiv.querySelector('.links-section');
+         if (existingSection) existingSection.remove();
+
+         const linksSection = document.createElement('div');
+         linksSection.className = 'links-section';
+         linksSection.style.marginTop = '30px';
+         linksSection.style.borderTop = '1px solid #ccc';
+         linksSection.style.paddingTop = '20px';
+
+         const linksHeader = document.createElement('h3');
+         linksHeader.textContent = 'Copyable Video Links';
+         linksSection.appendChild(linksHeader);
+
+         const linksList = document.createElement('textarea');
+         linksList.style.width = '100%';
+         linksList.style.minHeight = '150px';
+         linksList.style.padding = '10px';
+         linksList.style.marginTop = '10px';
+         linksList.readOnly = true;
+         linksList.style.boxSizing = 'border-box';
+         linksList.setAttribute('aria-label', 'List of video titles and links');
+
+         let linksText = '';
+         let globalIndex = 1;
+         const groupedVideos = {};
+         videos.forEach(video => {
+            const term = video.searchTerm || 'Unknown Term';
+            if (!groupedVideos[term]) groupedVideos[term] = [];
+            groupedVideos[term].push(video);
+         });
+
+         for (const [term, termVideos] of Object.entries(groupedVideos)) {
+             linksText += `\n--- Results for "${term}" ---\n\n`;
+             termVideos.forEach((video) => {
+                  const title = video.snippet?.title || 'No Title';
+                  // --- CORRECTED VIDEO URL ---
+                  const videoUrl = `https://www.youtube.com/watch?v=${video.id}`; // Standard YouTube watch URL
+                 linksText += `${globalIndex}. ${title}\n`;
+                 linksText += `   ${videoUrl}\n\n`;
+                 globalIndex++;
+             });
+         }
+
+         linksList.value = linksText.trim();
+         linksSection.appendChild(linksList);
+
+         const copyButton = document.createElement('button');
+         copyButton.textContent = 'Copy All Links';
+         copyButton.style.marginTop = '10px';
+         copyButton.addEventListener('click', () => {
+             try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(linksList.value).then(() => {
+                        console.log("APP.HTML: Links copied to clipboard (modern API).");
+                        copyButton.textContent = 'Copied!';
+                         copyButton.disabled = true;
+                        setTimeout(() => { copyButton.textContent = 'Copy All Links'; copyButton.disabled = false; }, 2000);
+                    }).catch(err => {
+                         console.error('APP.HTML: Failed to copy links (modern API):', err);
+                         copyViaExecCommand(linksList, copyButton); // Fallback
+                    });
+                } else {
+                    copyViaExecCommand(linksList, copyButton); // Fallback
+                }
+             } catch (err) {
+                  console.error('APP.HTML: Error during copy operation:', err);
+                 copyButton.textContent = 'Copy Failed!';
+                  setTimeout(() => { copyButton.textContent = 'Copy All Links'; }, 2000);
+             }
+         });
+         linksSection.appendChild(copyButton);
+
+         resultsDiv.appendChild(linksSection);
+     }
+
+     // Helper for execCommand copy fallback (Keep as is)
+     function copyViaExecCommand(textArea, button) {
+         console.log("APP.HTML: Attempting copy via execCommand fallback.");
+         textArea.select();
+          textArea.setSelectionRange(0, 99999);
+         try {
+             const successful = document.execCommand('copy');
+             if (successful) {
+                 console.log("APP.HTML: Links copied to clipboard (execCommand).");
+                 button.textContent = 'Copied!'; button.disabled = true;
+                 setTimeout(() => { button.textContent = 'Copy All Links'; button.disabled = false; }, 2000);
+             } else {
+                  console.error('APP.HTML: execCommand copy failed.');
+                 button.textContent = 'Copy Failed!'; setTimeout(() => { button.textContent = 'Copy All Links'; }, 2000);
+             }
+         } catch (err) {
+              console.error('APP.HTML: Error using execCommand copy:', err);
+             button.textContent = 'Copy Failed!'; setTimeout(() => { button.textContent = 'Copy All Links'; }, 2000);
+         }
+         window.getSelection()?.removeAllRanges();
+     }
+
+    </script>
+
+</body>
+</html>
